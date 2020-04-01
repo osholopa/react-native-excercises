@@ -1,19 +1,29 @@
-import React, { useState } from 'react'
-import { StyleSheet, Text, TextInput, View, Button } from 'react-native'
+import React, { useState, useEffect } from 'react'
+import {
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  Button,
+  FlatList
+} from 'react-native'
 
 export default function App() {
   const [first, setFirst] = useState('')
   const [second, setSecond] = useState('')
   const [result, setResult] = useState('')
+  const [history, setHistory] = useState([])
 
-  const calculate = addition => {
-    if (isNaN(first) | isNaN(second)) {
-      setResult('Invalid input. Use only numbers and dots.')
-    } else {
-      addition
-        ? setResult(Number(first) + Number(second))
-        : setResult(Number(first) - Number(second))
-    }
+  const sum = () => {
+    return Number(first) + Number(second)
+  }
+
+  const subtract = () => {
+    return Number(first) - Number(second)
+  }
+
+  const printExpression = (first = 0, operator, second = 0, result) => {
+    return `${first || 0} ${operator} ${second || 0} = ${result}`
   }
 
   return (
@@ -23,28 +33,54 @@ export default function App() {
         style={{ width: 200, borderColor: 'gray', borderWidth: 1 }}
         keyboardType={'numeric'}
         onChangeText={value => setFirst(value)}
-        value={first}
+        value={String(first)}
       />
       <TextInput
         style={{ width: 200, borderColor: 'gray', borderWidth: 1 }}
         keyboardType={'numeric'}
         onChangeText={value => setSecond(value)}
-        value={second}
+        value={String(second)}
       />
       <View style={styles.rowSpaceBetween}>
-        <Button onPress={() => calculate(true)} title={' + '} />
-        <Button onPress={() => calculate(false)} title={' - '} />
+        <Button
+          onPress={() => {
+            const currentResult = sum()
+            setResult(currentResult)
+            setHistory([
+              ...history,
+              {
+                expression: printExpression(first, '+', second, currentResult)
+              }
+            ])
+          }}
+          title={' + '}
+        />
+        <Button
+          onPress={() => {
+            const currentResult = subtract()
+            setResult(currentResult)
+            setHistory([
+              ...history,
+              { expression: printExpression(first, '-', second, currentResult) }
+            ])
+          }}
+          title={' - '}
+        />
       </View>
+      <Text>History</Text>
+      <FlatList
+        data={history}
+        renderItem={({ item }) => <Text>{item.expression}</Text>}
+      />
     </View>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    marginTop: 60,
     backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center'
+    alignItems: 'center'
   },
   rowSpaceBetween: {
     width: 80,
