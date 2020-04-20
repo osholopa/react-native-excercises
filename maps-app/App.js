@@ -1,14 +1,30 @@
 import React from 'react';
-import { StyleSheet, TextInput, View, Button, Alert } from 'react-native';
+import { StyleSheet, TextInput, View, Button, Alert } from 'react-native'
 import MapView, { Marker } from 'react-native-maps'
-import { useState } from 'react';
+import { useState, useEffect } from 'react'
+import * as Location from 'expo-location'
 
 export default function App() {
   const [address, setAddress] = useState('')
   const [region, setRegion] = useState([])
 
+  useEffect(() => {
+    getLocation()
+  }, [])
+
+  const getLocation = async () =>  {
+    let { status } = await Location.requestPermissionsAsync()
+    if(status !== 'granted') {
+      Alert.alert('No permission to access location')
+    } else {
+      let location = await Location.getCurrentPositionAsync({})
+      setAddress('Current position')
+      setRegion([location['coords'].latitude, location['coords'].longitude])
+    }
+  }
+
   //Api key here
-  const myApiKey = 'API_KEY_HERE'
+  const apiKey = 'API_KEY_HERE'
 
   const parseGetParams = (a) => {
     a.replace(', ', ',')
@@ -16,7 +32,7 @@ export default function App() {
   }
 
   const getCoordinates = () => {
-    const url = `http://www.mapquestapi.com/geocoding/v1/address?key=${myApiKey}&location=${parseGetParams(address)}`
+    const url = `http://www.mapquestapi.com/geocoding/v1/address?key=${apiKey}&location=${parseGetParams(address)}`
     fetch(url)
     .then((response) => response.json())
     .then((data) => {
