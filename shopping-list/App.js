@@ -1,25 +1,60 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   StyleSheet,
   Text,
   TextInput,
   View,
   Button,
-  FlatList,
-  Alert
+  FlatList
 } from 'react-native'
+import * as SQLite from 'expo-sqlite'
+
+const db = SQLite.openDatabase('shoppinglistdb.db')
 
 export default function App() {
-  const [text, setText] = useState('')
+  const [product, setProduct] = useState('')
+  const [amount, setAmount] = useState('')
   const [list, setList] = useState([])
 
-  const generateId = () => {
-    let s4 = () => {
-      return Math.floor((1 + Math.random()) * 0x10000)
-        .toString(16)
-        .substring(1)
-    }
-    return s4() + '-' + s4() + '-' + s4()
+  useEffect(() => {
+    db.transaction(tx => {
+      tx.executeSql('create table if not exists products (id integer primary key not null, product text, amount text);')
+    }, null, updateList)
+  }, [])
+
+  const saveItem = () => {
+    db.transaction(tx => {
+      tx.executeSql('insert into products (product, amount) values (?, ?);', [product, amount])
+    }, null, updateList)
+  }
+
+  const updateList = () => {
+    db.transaction(tx => {
+      tx.executeSql('select * from products;',[], (_, { rows }) =>
+        setList(rows._array)
+      )
+    })
+    setProduct('')
+    setAmount('')
+  }
+
+  const deleteItem = (id) => {
+    db.transaction(tx => {
+      tx.executeSql(`delete from products where id = ?;`, [id])
+    }, null, updateList)
+  }
+
+  const listSeparator = () => {
+    return (
+      <View
+        style={{
+          height: 5,
+          width: "80%",
+          backgroundColor: "#fff",
+          marginLeft: "10%"
+        }}
+      />
+    )
   }
 
   return (
@@ -27,35 +62,29 @@ export default function App() {
       <View style={styles.container}>
         <TextInput
           style={styles.textInput}
-          onChangeText={value => setText(value)}
-          value={text}
+          onChangeText={value => setProduct(value)}
+          value={product}
+          placeholder={'Product'}
         />
-        <View style={styles.buttonView}>
-          <Button
-            onPress={() => {
-              if (text === '') {
-                Alert.alert('Cannot add empty string')
-              } else {
-                setList([...list, { id: generateId(), content: text }])
-                setText('')
-              }
-            }}
-            title={' add '}
-          />
-          <Button
-            onPress={() => {
-              setList([])
-            }}
-            title={' clear '}
-          />
-        </View>
+        <TextInput
+          style={styles.textInput}
+          onChangeText={value => setAmount(value)}
+          value={amount}
+          placeholder={'Amount'}
+        />
+        <Button
+          onPress={saveItem}
+          title={' save '}
+        />
       </View>
       <View style={styles.listContainer}>
         <Text style={styles.listHeader}>Shopping list</Text>
         <FlatList
           style={{ paddingLeft: 15 }}
+          keyExtractor={item => item.id.toString()}
           data={list}
-          renderItem={({ item }) => <Text>{item.content}</Text>}
+          renderItem={({ item }) => <View style={styles.listItem}><Text style={{fontSize: 16}}> {item.product}, {item.amount} </Text><Text style={{fontSize: 16, color: '#0000ff'}} onPress={() => deleteItem(item.id)}>  bought</Text></View>}
+          ItemSeparatorComponent={listSeparator}
         />
       </View>
     </View>
@@ -78,18 +107,21 @@ const styles = StyleSheet.create({
     width: 200,
     borderColor: 'gray',
     borderWidth: 1,
-    marginBottom: 60
-  },
-  buttonView: {
-    flexDirection: 'row'
+    marginBottom: 5
   },
   listHeader: {
-    color: 'blue',
     fontWeight: 'bold',
     fontSize: 16,
-    width: 120
+    width: 120,
+    marginBottom: 10
   },
   listContainer: {
-    flex: 1
-  }
+    flex: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  listItem: {
+    flexDirection: 'row',
+    backgroundColor: '#fff'
+   }
 })
